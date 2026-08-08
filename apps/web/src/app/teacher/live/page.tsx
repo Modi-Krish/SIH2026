@@ -439,7 +439,7 @@ export default function LiveAttendanceFeed() {
 
                 {/* Scanning Overlay (Python OpenCV Feedback) */}
                 {isCameraActive && isCameraStreamValid && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-mono border flex items-center gap-2 shadow-lg font-bold z-10">
                       <span className={`w-2.5 h-2.5 rounded-full ${
                         isFaceMatched ? "bg-green-400 animate-ping" : isHumanFaceDetected ? "bg-yellow-400" : "bg-red-500"
