@@ -3,7 +3,7 @@ import { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { StudentService } from './student.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, Public } from '../auth/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { ROLES } from '@sapls/shared';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -46,7 +46,7 @@ export class StudentController {
     return this.studentService.findAll();
   }
 
-  @Roles(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.TEACHER)
+  @Public()
   @Get('embeddings')
   getEmbeddings() {
     return this.studentService.getEmbeddings();
@@ -58,6 +58,7 @@ export class StudentController {
     return this.studentService.findOne(id);
   }
 
+  @Public()
   @Get(':id/photo-file')
   async getPhotoFile(@Param('id') id: string, @Res() res: any) {
     const filePath = path.join(__dirname, '..', '..', 'uploads', 'students', `${id}.jpg`);
