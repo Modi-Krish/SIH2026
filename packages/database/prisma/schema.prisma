@@ -1,0 +1,462 @@
+// ═══════════════════════════════════════════════════════════
+// SAPLS — Prisma Schema
+// Smart Attendance & Personalized Learning System
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp"), vector]
+}
+
+// ═══════════════════════════ ENUMS ═══════════════════════════
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  COUNSELOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  LOST
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  PARTIAL
+  EXCUSED
+  OVERRIDE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum RecommendationCategory {
+  CODING_PRACTICE
+  READING
+  APTITUDE
+  VIDEO
+  PEER_GROUP
+  HACKATHON
+  CERTIFICATION
+  MENTOR_SESSION
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum RoutinePriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ActivityType {
+  CLASS
+  STUDY
+  BREAK
+  RECOMMENDATION
+  DEADLINE
+  CUSTOM
+}
+
+enum NotificationType {
+  ATTENDANCE_REMINDER
+  FREE_PERIOD_ALERT
+  GOAL_REMINDER
+  PARTIAL_ATTENDANCE
+  STUDENT_MISSING
+  CLASSROOM_OFFLINE
+  AP_FAILURE
+  SYSTEM
+}
+
+// ═══════════════════════════ MODELS ═══════════════════════════
+
+/// Core user model — linked to Supabase Auth via supabaseId
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  supabaseId  String   @unique @map("supabase_id")
+  email       String   @unique @db.VarChar(255)
+  collegeId   String   @unique @map("college_id") @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  role        UserRole @default(STUDENT)
+  avatarUrl   String?  @map("avatar_url")
+  phone       String?  @db.VarChar(20)
+  isActive    Boolean  @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student       Student?
+  teacher       Teacher?
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  overrides     AttendanceRecord[] @relation("OverrideBy")
+
+  @@map("users")
+}
+
+/// Academic department
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  students       Student[]
+  teachers       Teacher[]
+  subjects       Subject[]
+  timetableSlots TimetableSlot[]
+
+  @@map("departments")
+}
+
+/// Student profile — extends User
+model Student {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  departmentId         String   @map("department_id") @db.Uuid
+  semester             Int      @db.SmallInt
+  section              String?  @db.VarChar(10)
+  rollNumber           String?  @unique @map("roll_number") @db.VarChar(30)
+  careerGoal           String?  @map("career_goal")
+  attendancePercentage Decimal  @default(0.00) @map("attendance_percentage") @db.Decimal(5, 2)
+  skills               String[] @default([])
+  interests            String[] @default([])
+  learningPreferences  Json     @default("{}") @map("learning_preferences")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department        Department         @relation(fields: [departmentId], references: [id])
+  faceEmbeddings    FaceEmbedding[]
+  devices           Device[]
+  attendanceRecords AttendanceRecord[]
+  recommendations   Recommendation[]
+  dailyRoutines     DailyRoutine[]
+  careerGoals       CareerGoal[]
+  studentSkills     StudentSkill[]
+
+  @@map("students")
+}
+
+/// Teacher profile — extends User
+model Teacher {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  departmentId String   @map("department_id") @db.Uuid
+  designation  String?  @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department         Department          @relation(fields: [departmentId], references: [id])
+  timetableSlots     TimetableSlot[]
+  attendanceSessions AttendanceSession[]
+
+  @@map("teachers")
+}
+
+/// Face embedding — stored as vector(128) for face-api.js descriptors
+model FaceEmbedding {
+  id        String   @id @default(uuid()) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  embedding Unsupported("vector(128)")
+  angle     String   @db.VarChar(20) // 'neutral', 'smile', 'left', 'right', 'up', 'down'
+  version   Int      @default(1)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("face_embeddings")
+}
+
+/// Registered student device
+model Device {
+  id          String       @id @default(uuid()) @db.Uuid
+  studentId   String       @map("student_id") @db.Uuid
+  deviceToken String       @map("device_token") @db.VarChar(512)
+  platform    String?      @db.VarChar(20) // 'android', 'ios', 'web'
+  deviceName  String?      @map("device_name") @db.VarChar(255)
+  macAddress  String?      @map("mac_address") @db.VarChar(17)
+  lastSeen    DateTime?    @map("last_seen")
+  status      DeviceStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("devices")
+}
+
+/// Physical classroom with Wi-Fi AP info
+model Classroom {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  building     String?  @db.VarChar(100)
+  floor        Int?     @db.SmallInt
+  capacity     Int?
+  apSsid       String?  @map("ap_ssid") @db.VarChar(100)
+  apBssid      String?  @map("ap_bssid") @db.VarChar(17)
+  edgeDeviceId String?  @map("edge_device_id") @db.VarChar(100)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  timetableSlots     TimetableSlot[]
+  attendanceSessions AttendanceSession[]
+
+  @@map("classrooms")
+}
+
+/// Academic subject / course
+model Subject {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(255)
+  code         String   @unique @db.VarChar(20)
+  departmentId String   @map("department_id") @db.Uuid
+  semester     Int?     @db.SmallInt
+  credits      Int      @default(3)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  department     Department      @relation(fields: [departmentId], references: [id])
+  timetableSlots TimetableSlot[]
+
+  @@map("subjects")
+}
+
+/// Timetable slot — one class period
+model TimetableSlot {
+  id           String    @id @default(uuid()) @db.Uuid
+  subjectId    String    @map("subject_id") @db.Uuid
+  teacherId    String    @map("teacher_id") @db.Uuid
+  classroomId  String    @map("classroom_id") @db.Uuid
+  departmentId String    @map("department_id") @db.Uuid
+  semester     Int       @db.SmallInt
+  section      String?   @db.VarChar(10)
+  day          DayOfWeek
+  startTime    String    @map("start_time") @db.VarChar(5) // "09:00"
+  endTime      String    @map("end_time") @db.VarChar(5)   // "10:00"
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  subject            Subject              @relation(fields: [subjectId], references: [id])
+  teacher            Teacher              @relation(fields: [teacherId], references: [id])
+  classroom          Classroom            @relation(fields: [classroomId], references: [id])
+  department         Department           @relation(fields: [departmentId], references: [id])
+  attendanceSessions AttendanceSession[]
+  dailyRoutines      DailyRoutine[]
+
+  @@index([day])
+  @@map("timetable_slots")
+}
+
+/// Attendance session — one instance of a timetable slot on a specific date
+model AttendanceSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  timetableSlotId String    @map("timetable_slot_id") @db.Uuid
+  classroomId     String    @map("classroom_id") @db.Uuid
+  teacherId       String    @map("teacher_id") @db.Uuid
+  date            DateTime  @db.Date
+  startedAt       DateTime? @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  timetableSlot    TimetableSlot      @relation(fields: [timetableSlotId], references: [id])
+  classroom        Classroom          @relation(fields: [classroomId], references: [id])
+  teacher          Teacher            @relation(fields: [teacherId], references: [id])
+  attendanceRecords AttendanceRecord[]
+
+  @@map("attendance_sessions")
+}
+
+/// Individual attendance record — one student per session
+model AttendanceRecord {
+  id                String           @id @default(uuid()) @db.Uuid
+  sessionId         String           @map("session_id") @db.Uuid
+  studentId         String           @map("student_id") @db.Uuid
+  faceVerified      Boolean          @default(false) @map("face_verified")
+  faceConfidence    Decimal?         @map("face_confidence") @db.Decimal(4, 3)
+  livenessPassed    Boolean          @default(false) @map("liveness_passed")
+  wifiVerified      Boolean          @default(false) @map("wifi_verified")
+  wifiDuration      Int              @default(0) @map("wifi_duration") // seconds
+  wifiJoinTime      DateTime?        @map("wifi_join_time")
+  wifiDisconnectTime DateTime?       @map("wifi_disconnect_time")
+  status            AttendanceStatus @default(ABSENT)
+  teacherOverride   Boolean          @default(false) @map("teacher_override")
+  overrideReason    String?          @map("override_reason")
+  overrideById      String?          @map("override_by_id") @db.Uuid
+  checkedInAt       DateTime?        @map("checked_in_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  session    AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    Student           @relation(fields: [studentId], references: [id])
+  overrideBy User?             @relation("OverrideBy", fields: [overrideById], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+  @@map("attendance_records")
+}
+
+/// Personalized learning recommendation
+model Recommendation {
+  id                String                 @id @default(uuid()) @db.Uuid
+  studentId         String                 @map("student_id") @db.Uuid
+  title             String                 @db.VarChar(500)
+  description       String?
+  contentUrl        String?                @map("content_url")
+  category          RecommendationCategory
+  difficulty        DifficultyLevel        @default(BEGINNER)
+  estimatedDuration Int?                   @map("estimated_duration") // minutes
+  skillTags         String[]               @default([]) @map("skill_tags")
+  isAccepted        Boolean                @default(false) @map("is_accepted")
+  isCompleted       Boolean                @default(false) @map("is_completed")
+  acceptedAt        DateTime?              @map("accepted_at")
+  completedAt       DateTime?              @map("completed_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+
+  // Relations
+  student       Student        @relation(fields: [studentId], references: [id])
+  dailyRoutines DailyRoutine[]
+
+  @@index([studentId])
+  @@map("recommendations")
+}
+
+/// Daily routine entry — one scheduled activity block
+model DailyRoutine {
+  id                     String          @id @default(uuid()) @db.Uuid
+  studentId              String          @map("student_id") @db.Uuid
+  date                   DateTime        @db.Date
+  startTime              String          @map("start_time") @db.VarChar(5)
+  endTime                String          @map("end_time") @db.VarChar(5)
+  title                  String          @db.VarChar(255)
+  description            String?
+  activity               ActivityType
+  priority               RoutinePriority @default(MEDIUM)
+  isCompleted            Boolean         @default(false) @map("is_completed")
+  linkedRecommendationId String?         @map("linked_recommendation_id") @db.Uuid
+  linkedTimetableSlotId  String?         @map("linked_timetable_slot_id") @db.Uuid
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  student              Student          @relation(fields: [studentId], references: [id])
+  linkedRecommendation Recommendation?  @relation(fields: [linkedRecommendationId], references: [id])
+  linkedTimetableSlot  TimetableSlot?   @relation(fields: [linkedTimetableSlotId], references: [id])
+
+  @@index([studentId, date])
+  @@map("daily_routines")
+}
+
+/// User notification
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String           @db.VarChar(255)
+  message   String?
+  data      Json             @default("{}")
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+/// Audit log for compliance and security
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+/// Student career goal tracking
+model CareerGoal {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  title           String   @db.VarChar(255)
+  description     String?
+  targetSkills    String[] @default([]) @map("target_skills")
+  currentProgress Decimal  @default(0.00) @map("current_progress") @db.Decimal(5, 2)
+  targetDate      DateTime? @map("target_date") @db.Date
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@map("career_goals")
+}
+
+/// Student skill tracking with proficiency
+model StudentSkill {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  skillName        String   @map("skill_name") @db.VarChar(100)
+  proficiencyLevel Int      @default(0) @map("proficiency_level") // 0-100
+  source           String?  @db.VarChar(50) // 'self_assessed', 'recommendation', 'certification'
+  verified         Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, skillName])
+  @@map("student_skills")
+}

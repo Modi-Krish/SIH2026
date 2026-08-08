@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL with pgvector (for local dev/testing) ──
+  db:
+    image: ankane/pgvector:latest
+    container_name: sapls-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sapls
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # ── Redis (caching, sessions, queues) ──
+  redis:
+    image: redis:7-alpine
+    container_name: sapls-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # ── Mosquitto MQTT Broker (edge device communication) ──
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: sapls-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./edge/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    restart: unless-stopped
+
+  # ── Redis Commander (dev UI for Redis) ──
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sapls-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - dev-tools
+
+volumes:
+  pg-data:
+  redis-data:
+  mosquitto-data:
+  mosquitto-log:

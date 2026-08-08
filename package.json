@@ -1,0 +1,39 @@
+{
+  "name": "sapls",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Attendance & Personalized Learning System",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@sapls/web",
+    "dev:api": "turbo run dev --filter=@sapls/api",
+    "dev:ai": "turbo run dev --filter=@sapls/ai-service",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@sapls/web",
+    "build:api": "turbo run build --filter=@sapls/api",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "db:generate": "turbo run db:generate --filter=@sapls/database",
+    "db:push": "turbo run db:push --filter=@sapls/database",
+    "db:migrate": "turbo run db:migrate --filter=@sapls/database",
+    "db:seed": "turbo run db:seed --filter=@sapls/database",
+    "db:enable-rls": "turbo run db:enable-rls --filter=@sapls/database",
+    "seed": "turbo run db:seed --filter=@sapls/database",
+    "db:studio": "turbo run db:studio --filter=@sapls/database",
+    "clean": "turbo run clean",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

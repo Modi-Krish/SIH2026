@@ -1,0 +1,31 @@
+{
+  "name": "@sapls/database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prisma schema and database utilities for SAPLS",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "db:generate": "dotenv -e ../../.env -- prisma generate",
+    "db:push": "dotenv -e ../../.env -- prisma db push",
+    "seed": "dotenv -e ../../.env -- tsx src/seed.ts",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:migrate:prod": "dotenv -e ../../.env -- prisma migrate deploy",
+    "db:seed": "dotenv -e ../../.env -- tsx src/seed.ts",
+    "db:enable-rls": "dotenv -e ../../.env -- tsx src/enable-rls.ts",
+    "db:studio": "dotenv -e ../../.env -- prisma studio",
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
+    "dotenv-cli": "^11.0.0",
+    "prisma": "^6.5.0",
+    "rimraf": "^6.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}

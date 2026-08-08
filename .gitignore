@@ -1,0 +1,55 @@
+# ── Dependencies ──
+node_modules/
+.pnpm-store/
+
+# ── Build outputs ──
+dist/
+.next/
+out/
+build/
+.turbo/
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ── Testing ──
+coverage/
+.nyc_output/
+
+# ── Python (AI Service) ──
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# ── Prisma ──
+prisma/*.db
+prisma/*.db-journal
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── Misc ──
+*.tsbuildinfo
+.vercel/
