@@ -60,7 +60,7 @@ export class StudentController {
 
   @Get(':id/photo-file')
   async getPhotoFile(@Param('id') id: string, @Res() res: any) {
-    const filePath = path.join(process.cwd(), 'uploads', 'students', `${id}.jpg`);
+    const filePath = path.join(__dirname, '..', '..', 'uploads', 'students', `${id}.jpg`);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Photo not found');
     }

@@ -77,7 +77,7 @@ export class StudentService {
       `, student.id, embeddingStr);
 
       // Save photo locally
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'students');
+      const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'students');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }

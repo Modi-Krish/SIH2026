@@ -76,6 +76,7 @@ export default function LiveAttendanceFeed() {
   const [facialStatusText, setFacialStatusText] = useState<string>("Stand in front of camera to scan face...");
   const [faceBbox, setFaceBbox] = useState<[number, number, number, number] | null>(null);
   const [studentEmbeddings, setStudentEmbeddings] = useState<any[]>([]);
+  const [imageError, setImageError] = useState<Record<string, boolean>>({});
 
   // Load student embeddings from database on mount
   useEffect(() => {
@@ -586,13 +587,16 @@ export default function LiveAttendanceFeed() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  {student.avatarUrl ? (
+                  {student.avatarUrl && !imageError[student.id] ? (
                     <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primary/40 shrink-0">
                       <Image
                         src={student.avatarUrl}
                         alt={student.name}
                         fill
                         className="object-cover"
+                        onError={() => {
+                          setImageError((prev) => ({ ...prev, [student.id]: true }));
+                        }}
                       />
                     </div>
                   ) : (
