@@ -77,6 +77,7 @@ export default function LiveAttendanceFeed() {
   const [faceBbox, setFaceBbox] = useState<[number, number, number, number] | null>(null);
   const [studentEmbeddings, setStudentEmbeddings] = useState<any[]>([]);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
+  const [detectedFaces, setDetectedFaces] = useState<any[]>([]);
 
   // Load student embeddings from database on mount
   useEffect(() => {
@@ -158,6 +159,7 @@ export default function LiveAttendanceFeed() {
             setFaceBbox(null);
             setFacialStatusText("NO HUMAN FACE DETECTED IN CAMERA FEED");
 
+            setDetectedFaces([]);
             setStudents((prev) =>
               prev.map((s) => ({
                 ...s,
@@ -168,7 +170,10 @@ export default function LiveAttendanceFeed() {
             );
           } else {
             setIsHumanFaceDetected(true);
-            const matches = result.matches || [];
+            const detectedList = result.detected_faces || [];
+            setDetectedFaces(detectedList);
+
+            const matches = detectedList.filter((f: any) => f.matched);
             const isAnyMatched = matches.length > 0;
             setIsFaceMatched(isAnyMatched);
             
@@ -195,7 +200,6 @@ export default function LiveAttendanceFeed() {
                   const status = s.wifiStatus === "CONNECTED" ? "PRESENT" : "ABSENT";
                   return { ...s, faceStatus, faceConfidence, status };
                 } else {
-                  // If a face is in the feed but they didn't match, set to FAILED
                   return { ...s, faceStatus: "FAILED", faceConfidence: 0, status: "ABSENT" };
                 }
               })
@@ -220,6 +224,7 @@ export default function LiveAttendanceFeed() {
       setIsFaceMatched(false);
       setConfidenceScore(0);
       setFaceBbox(null);
+      setDetectedFaces([]);
             setStudents((prev) =>
               prev.map((s) => ({
                 ...s,
@@ -417,7 +422,7 @@ export default function LiveAttendanceFeed() {
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover ${isCameraActive ? "block" : "hidden"}`}
+                  className={`w-full h-full object-fill ${isCameraActive ? "block" : "hidden"}`}
                 />
 
                 {!isCameraActive && (
@@ -434,8 +439,8 @@ export default function LiveAttendanceFeed() {
 
                 {/* Scanning Overlay (Python OpenCV Feedback) */}
                 {isCameraActive && isCameraStreamValid && (
-                  <div className="absolute inset-0 pointer-events-none rounded-xl flex items-center justify-center">
-                    <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-mono border flex items-center gap-2 shadow-lg font-bold">
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-mono border flex items-center gap-2 shadow-lg font-bold z-10">
                       <span className={`w-2.5 h-2.5 rounded-full ${
                         isFaceMatched ? "bg-green-400 animate-ping" : isHumanFaceDetected ? "bg-yellow-400" : "bg-red-500"
                       }`} />
@@ -444,28 +449,50 @@ export default function LiveAttendanceFeed() {
                       </span>
                     </div>
 
-                    {/* Bounding Box ONLY shown when Python OpenCV detects a real human face */}
-                    {isHumanFaceDetected ? (
-                      <div className={`w-52 h-52 border-2 border-dashed rounded-xl flex flex-col items-center justify-between p-2 text-[10px] font-mono backdrop-blur-[1px] transition-all ${
-                        isFaceMatched ? "border-accent bg-accent/5" : "border-yellow-500 bg-yellow-500/5"
-                      }`}>
-                        <span className="bg-black/80 px-2 py-0.5 rounded text-accent">PYTHON OPENCV Haar Cascade</span>
-                        <span className={`font-bold px-2 py-0.5 rounded shadow ${
-                          isFaceMatched ? "bg-accent text-black" : "bg-yellow-500 text-black"
-                        }`}>
-                          {isFaceMatched && firstMatchedStudent 
-                            ? `MATCHED: ${firstMatchedStudent.name} (${firstMatchedStudent.faceConfidence}%)` 
-                            : isFaceMatched 
-                            ? `FACE RECOGNIZED (${confidenceScore}%)` 
-                            : `FACE UNKNOWN`}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="p-4 rounded-xl bg-black/80 border border-red-500/30 text-center space-y-1">
-                        <p className="text-xs font-bold text-red-400">🚫 NO HUMAN FACE DETECTED</p>
-                        <p className="text-[10px] text-gray-400">Python OpenCV found 0 face bounding boxes in video frame.</p>
-                      </div>
-                    )}
+                    {/* Dynamic Bounding Boxes Overlay */}
+                    {detectedFaces.map((face, index) => {
+                      const video = videoRef.current;
+                      if (!video) return null;
+                      
+                      const W = video.clientWidth;
+                      const H = video.clientHeight;
+                      const VW = video.videoWidth || 640;
+                      const VH = video.videoHeight || 480;
+                      
+                      const xScale = W / VW;
+                      const yScale = H / VH;
+                      
+                      const [xMin, yMin, xMax, yMax] = face.bbox;
+                      const left = xMin * xScale;
+                      const top = yMin * yScale;
+                      const width = (xMax - xMin) * xScale;
+                      const height = (yMax - yMin) * yScale;
+                      
+                      const studentInfo = students.find((s) => s.id === face.studentId);
+                      const label = face.matched && studentInfo
+                        ? `MATCHED: ${studentInfo.name} (${face.confidence}%)`
+                        : "FACE UNKNOWN";
+                        
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            position: "absolute",
+                            left: `${left}px`,
+                            top: `${top}px`,
+                            width: `${width}px`,
+                            height: `${height}px`,
+                          }}
+                          className={`border-2 border-dashed rounded-lg flex flex-col justify-end pointer-events-none transition-all duration-150 z-20 ${
+                            face.matched ? "border-accent bg-accent/5" : "border-yellow-500 bg-yellow-500/5"
+                          }`}
+                        >
+                          <span className={`px-1.5 py-0.5 text-[8px] font-mono font-bold text-white bg-black/80 rounded-t-sm whitespace-nowrap overflow-hidden text-ellipsis w-max max-w-full`}>
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

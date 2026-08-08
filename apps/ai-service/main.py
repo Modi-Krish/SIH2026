@@ -189,13 +189,13 @@ async def recognize_multiple(
         frame_bytes = await frame.read()
         frame_img = cv2.imdecode(np.frombuffer(frame_bytes, np.uint8), cv2.IMREAD_COLOR)
         if frame_img is None:
-            return {"success": False, "message": "Invalid frame image", "faces_detected": 0, "matches": []}
+            return {"success": False, "message": "Invalid frame image", "faces_detected": 0, "detected_faces": []}
 
         frame_faces = face_app.get(frame_img)
         if len(frame_faces) == 0:
-            return {"success": True, "faces_detected": 0, "matches": []}
+            return {"success": True, "faces_detected": 0, "detected_faces": []}
 
-        matches = []
+        detected_faces = []
         
         # Loop through all detected faces in the camera frame
         for face in frame_faces:
@@ -215,20 +215,27 @@ async def recognize_multiple(
             match_threshold = 0.45
             if best_similarity >= match_threshold:
                 confidence_pct = 80.0 + ((best_similarity - match_threshold) / (1.0 - match_threshold)) * 20.0
-                matches.append({
+                detected_faces.append({
+                    "matched": True,
                     "studentId": best_match_id,
                     "confidence": round(confidence_pct, 1),
-                    "similarity": best_similarity,
+                    "bbox": face.bbox.astype(int).tolist()
+                })
+            else:
+                detected_faces.append({
+                    "matched": False,
+                    "studentId": None,
+                    "confidence": 0,
                     "bbox": face.bbox.astype(int).tolist()
                 })
                 
         return {
             "success": True,
             "faces_detected": len(frame_faces),
-            "matches": matches
+            "detected_faces": detected_faces
         }
     except Exception as e:
-        return {"success": False, "message": str(e), "faces_detected": 0, "matches": []}
+        return {"success": False, "message": str(e), "faces_detected": 0, "detected_faces": []}
 
 @app.post("/api/v1/ai/recommendations")
 async def generate_recommendations(req: RecommendationRequest):
