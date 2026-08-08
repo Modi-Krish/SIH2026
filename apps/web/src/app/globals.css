@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  
+  --color-background: #0B0E14;
+  --color-surface: #151A24;
+  --color-surface-hover: #1E2532;
+  
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-primary-glow: rgba(59, 130, 246, 0.5);
+  
+  --color-secondary: #8B5CF6;
+  --color-accent: #10B981;
+  --color-danger: #EF4444;
+  
+  --color-text-primary: #F3F4F6;
+  --color-text-secondary: #9CA3AF;
+  
+  --radius-xl: 1.5rem;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-panel {
+  background: rgba(21, 26, 36, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.gradient-text {
+  background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.input-field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: var(--color-text-primary);
+  transition: all 0.2s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px var(--color-primary-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--color-primary-glow);
+}

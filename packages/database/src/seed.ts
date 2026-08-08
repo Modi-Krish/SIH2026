@@ -185,6 +185,16 @@ async function main() {
     }
   });
 
+  const demoAdminUser = await prisma.user.create({
+    data: {
+      supabaseId: 'demo-admin-id-123',
+      email: 'admin@sapls.edu',
+      collegeId: 'DEMO-ADM-001',
+      name: 'Demo Admin',
+      role: UserRole.ADMIN,
+    }
+  });
+
   console.log('Created DEMO accounts.');
   console.log('Seed completed successfully!');
 }

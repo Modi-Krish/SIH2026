@@ -1,13 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaClient } from '@sapls/database';
 import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
+const prisma = new PrismaClient();
 
 @Injectable()
 export class ClassroomService {
   private readonly logger = new Logger(ClassroomService.name);
+
+  async getDepartments() {
+    return prisma.department.findMany();
+  }
 
   async getHotspotStatus() {
     const interfaces = os.networkInterfaces();

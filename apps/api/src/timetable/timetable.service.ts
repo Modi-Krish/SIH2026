@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@sapls/database';
+import { PrismaClient } from '@sapls/database';
+
+const prisma = new PrismaClient();
 
 @Injectable()
 export class TimetableService {
@@ -68,5 +70,61 @@ export class TimetableService {
     }
 
     return freePeriods;
+  }
+
+  async assignSlot(data: {
+    subjectId: string;
+    teacherId: string;
+    classroomId: string;
+    departmentId: string;
+    semester: number;
+    section?: string;
+    day: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+    startTime: string;
+    endTime: string;
+  }) {
+    return prisma.timetableSlot.create({
+      data: {
+        subjectId: data.subjectId,
+        teacherId: data.teacherId,
+        classroomId: data.classroomId,
+        departmentId: data.departmentId,
+        semester: Number(data.semester),
+        section: data.section,
+        day: data.day as any,
+        startTime: data.startTime,
+        endTime: data.endTime,
+      },
+      include: {
+        subject: true,
+        teacher: { include: { user: true } },
+        classroom: true,
+        department: true,
+      },
+    });
+  }
+
+  async deleteSlot(id: string) {
+    await prisma.timetableSlot.delete({ where: { id } });
+    return { success: true, message: `Timetable slot ${id} deleted` };
+  }
+
+  async getTeacherTimetable(teacherId: string, date: Date) {
+    const dayOfWeek = date.getDay();
+    const dayName = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][dayOfWeek];
+
+    return prisma.timetableSlot.findMany({
+      where: {
+        teacherId: teacherId,
+        day: dayName as any,
+        isActive: true,
+      },
+      include: {
+        subject: true,
+        classroom: true,
+        department: true,
+      },
+      orderBy: { startTime: 'asc' },
+    });
   }
 }

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "uvicorn main:app --reload --port 8000",
+    "dev": "venv\\Scripts\\uvicorn main:app --reload --port 8000",
     "build": "echo 'No build step for python'",
-    "start": "uvicorn main:app --host 0.0.0.0 --port 8000"
+    "start": "venv\\Scripts\\uvicorn main:app --host 0.0.0.0 --port 8000"
   }
 }

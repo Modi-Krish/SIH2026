@@ -1,6 +1,9 @@
 import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { prisma } from '@sapls/database';
+import { PrismaClient } from '@sapls/database';
+import * as jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
 
 @Injectable()
 export class AuthService {
@@ -92,6 +95,46 @@ export class AuthService {
       access_token: authData.session.access_token,
       refresh_token: authData.session.refresh_token,
       user: authData.user,
+    };
+  }
+
+  async devLogin(role: 'ADMIN' | 'TEACHER' | 'STUDENT' = 'ADMIN') {
+    const user = await prisma.user.findFirst({
+      where: { role: role as any },
+    });
+
+    if (!user) {
+      throw new BadRequestException(`No user found in database with role ${role}. Run 'pnpm seed' first.`);
+    }
+
+    const secret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this';
+    const token = jwt.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        user_metadata: {
+          role: user.role,
+          name: user.name,
+          collegeId: user.collegeId,
+        },
+        app_metadata: {
+          role: user.role,
+        },
+      },
+      secret,
+      { expiresIn: '7d' }
+    );
+
+    return {
+      access_token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        collegeId: user.collegeId,
+      },
     };
   }
 }

@@ -1,5 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { prisma } from '@sapls/database';
+import { PrismaClient } from '@sapls/database';
+
+const prisma = new PrismaClient();
 
 @Injectable()
 export class RecommendationService {

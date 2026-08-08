@@ -42,6 +42,9 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+apps/ai-service/models/
+*.zip
+*.onnx
 
 # ── Prisma ──
 prisma/*.db

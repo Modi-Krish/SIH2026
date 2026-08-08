@@ -9,4 +9,9 @@ export class ClassroomController {
   getHotspotStatus() {
     return this.classroomService.getHotspotStatus();
   }
+
+  @Get('departments')
+  getDepartments() {
+    return this.classroomService.getDepartments();
+  }
 }

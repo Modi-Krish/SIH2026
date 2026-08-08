@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { prisma } from '@sapls/database';
+import { PrismaClient } from '@sapls/database';
 import { TimetableService } from '../timetable/timetable.service';
 import { RecommendationService } from '../recommendation/recommendation.service';
+
+const prisma = new PrismaClient();
 
 @Injectable()
 export class RoutineService {

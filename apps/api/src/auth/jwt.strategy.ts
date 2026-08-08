@@ -17,12 +17,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
     // Extract role from app_metadata if present, else fallback to user_metadata or default
-    const role = payload.app_metadata?.role || payload.user_metadata?.role || 'STUDENT';
+    const role = payload.role || payload.app_metadata?.role || payload.user_metadata?.role || 'STUDENT';
     
     return { 
       userId: payload.sub,
       email: payload.email,
-      role: role 
+      role: String(role).toUpperCase()
     };
   }
 }

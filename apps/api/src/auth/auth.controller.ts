@@ -20,6 +20,12 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Public()
+  @Post('dev-login')
+  async devLogin(@Body('role') role?: 'ADMIN' | 'TEACHER' | 'STUDENT') {
+    return this.authService.devLogin(role || 'ADMIN');
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getProfile(@Request() req: any) {

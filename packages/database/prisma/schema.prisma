@@ -183,11 +183,11 @@ model Teacher {
   @@map("teachers")
 }
 
-/// Face embedding — stored as vector(128) for face-api.js descriptors
+/// Face embedding — stored as vector(512) for ArcFace descriptors
 model FaceEmbedding {
   id        String   @id @default(uuid()) @db.Uuid
   studentId String   @map("student_id") @db.Uuid
-  embedding Unsupported("vector(128)")
+  embedding Unsupported("vector(512)")
   angle     String   @db.VarChar(20) // 'neutral', 'smile', 'left', 'right', 'up', 'down'
   version   Int      @default(1)
   isActive  Boolean  @default(true) @map("is_active")
